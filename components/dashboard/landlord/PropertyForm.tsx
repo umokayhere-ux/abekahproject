@@ -106,6 +106,8 @@ export function PropertyForm({
     setUploading(true);
     const formData = new FormData();
     for (const file of Array.from(files)) formData.append("files", file);
+    // Tells the API these are listing photos: landlord/admin, up to 12.
+    formData.append("purpose", "property");
 
     try {
       const data = await apiFetch<{ images: { url: string }[] }>("/api/uploads", {

@@ -29,8 +29,9 @@ export function ProfilePanel() {
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
 
-  // Uploads require the landlord/admin role, so tenants keep the URL field only.
-  const canUpload = user?.role === "landlord" || user?.role === "admin";
+  // Shown only if the user asks for it, or if uploading is unavailable on this
+  // deployment (no Cloudinary credentials), so a link is still a way through.
+  const [showUrlField, setShowUrlField] = useState(false);
 
   const handleProfileSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -59,6 +60,8 @@ export function ProfilePanel() {
     setUploadingAvatar(true);
     const form = new FormData();
     form.append("files", file);
+    // Tells the API this is a profile picture: any role, exactly one file.
+    form.append("purpose", "avatar");
     try {
       const data = await apiFetch<{ images: { url: string }[] }>("/api/uploads", {
         method: "POST",
@@ -70,9 +73,18 @@ export function ProfilePanel() {
         toast.success("Photo uploaded. Save your profile to apply it.");
       }
     } catch (error) {
-      toast.error(
-        error instanceof ApiError ? error.message : "Could not upload that photo",
-      );
+      // 503 means image uploads are not configured on this deployment; offer
+      // the link field rather than leaving the user with a dead button.
+      if (error instanceof ApiError && error.status === 503) {
+        setShowUrlField(true);
+        toast.error(
+          "Image uploads are not configured here. Paste a photo link instead.",
+        );
+      } else {
+        toast.error(
+          error instanceof ApiError ? error.message : "Could not upload that photo",
+        );
+      }
     } finally {
       setUploadingAvatar(false);
     }
@@ -127,36 +139,60 @@ export function ProfilePanel() {
           <div className="flex items-center gap-4">
             <UserAvatar name={name || "You"} src={avatar} size="xl" />
             <div className="min-w-0 flex-1 space-y-2">
-              {canUpload && (
-                <>
-                  <label
-                    htmlFor="avatar-upload"
-                    className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-ink-900 transition-colors hover:bg-surface-muted"
-                  >
-                    <Upload className="size-4" aria-hidden="true" />
-                    {uploadingAvatar ? "Uploading…" : "Upload photo"}
-                  </label>
-                  <input
-                    id="avatar-upload"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/avif"
-                    className="sr-only"
-                    disabled={uploadingAvatar}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      if (file) void handleAvatarUpload(file);
-                    }}
-                  />
-                </>
-              )}
-              <Input
-                label="Photo URL"
-                type="url"
-                placeholder="https://…"
-                value={avatar}
-                error={profileErrors.avatar}
-                onChange={(event) => setAvatar(event.target.value)}
+              {/* Uploading is the primary path for every role. */}
+              <label
+                htmlFor="avatar-upload"
+                className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-ink-900 transition-colors hover:bg-surface-muted"
+              >
+                <Upload className="size-4" aria-hidden="true" />
+                {uploadingAvatar ? "Uploading…" : "Upload photo"}
+              </label>
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif"
+                className="sr-only"
+                disabled={uploadingAvatar}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void handleAvatarUpload(file);
+                  // Reset so re-selecting the same file fires onChange again.
+                  event.target.value = "";
+                }}
               />
+
+              {avatar && !showUrlField && (
+                <p className="flex items-center gap-2 text-xs text-ink-500">
+                  <span className="truncate">Photo set</span>
+                  <button
+                    type="button"
+                    onClick={() => setAvatar("")}
+                    className="font-semibold text-red-600 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </p>
+              )}
+
+              {showUrlField ? (
+                <Input
+                  label="Photo link"
+                  type="url"
+                  placeholder="https://…"
+                  hint="Paste a link to an image instead of uploading one."
+                  value={avatar}
+                  error={profileErrors.avatar}
+                  onChange={(event) => setAvatar(event.target.value)}
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowUrlField(true)}
+                  className="text-xs font-medium text-ink-500 hover:text-brand-700 hover:underline"
+                >
+                  or paste a link instead
+                </button>
+              )}
             </div>
           </div>
 
