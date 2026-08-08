@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
-import { env } from "./env";
+import { ConfigError, env } from "./env";
+import { DatabaseUnavailableError } from "./db";
 import type { ApiResponse } from "@/types";
 
 /**
@@ -83,7 +84,36 @@ export function withErrorHandling<Args extends unknown[]>(
         );
       }
 
-      // Log server-side only; the client gets nothing diagnostic.
+      /*
+       * A misconfigured deployment is the operator's problem to fix, not a bug,
+       * and it must not be reported as an indistinguishable 500. The variable
+       * name is not a secret — its *value* is — so naming it turns an
+       * unexplained failure into a one-line fix.
+       */
+      if (error instanceof ConfigError) {
+        console.error(
+          `[api] configuration error: ${error.variable} — ${error.message}`,
+        );
+        return fail(
+          `This deployment is missing required configuration (${error.variable}). ` +
+            "If you are the administrator, check your environment variables.",
+          503,
+        );
+      }
+
+      if (error instanceof DatabaseUnavailableError) {
+        // The driver's message names the host and port, so it is logged but
+        // never returned.
+        console.error("[api] database unavailable:", error.cause);
+        return fail(
+          "Cannot reach the database right now. If you are the administrator, " +
+            "check MONGODB_URI and that your IP is allowed in MongoDB Atlas.",
+          503,
+        );
+      }
+
+      // Anything left really is unexpected. Log it; tell the client nothing
+      // diagnostic in production.
       console.error("[api] unhandled error:", error);
       return fail(
         env.isProduction

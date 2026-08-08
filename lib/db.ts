@@ -24,6 +24,21 @@ const cache: MongooseCache = globalThis._rfMongoose ?? {
 };
 globalThis._rfMongoose = cache;
 
+/**
+ * Thrown when the database cannot be reached.
+ *
+ * Distinct from a generic error so the API layer can answer 503 with an
+ * actionable message rather than an opaque 500 — the difference between an
+ * operator knowing to check their Atlas IP allowlist and being told only that
+ * "something went wrong".
+ */
+export class DatabaseUnavailableError extends Error {
+  constructor(readonly cause: unknown) {
+    super("Could not connect to the database");
+    this.name = "DatabaseUnavailableError";
+  }
+}
+
 export async function connectDB(): Promise<typeof mongoose> {
   if (cache.conn) return cache.conn;
 
@@ -40,7 +55,9 @@ export async function connectDB(): Promise<typeof mongoose> {
         // Clear the cached promise so a later request can retry instead of
         // permanently reusing a rejected promise.
         cache.promise = null;
-        throw error;
+        // The driver's message names the host and port, which we do not want
+        // to hand to a browser — wrap it so the API layer can classify it.
+        throw new DatabaseUnavailableError(error);
       });
   }
 

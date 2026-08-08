@@ -6,10 +6,31 @@
  * Nothing in this file may be imported from a Client Component.
  */
 
+/**
+ * Thrown when the deployment is misconfigured — a required variable is absent
+ * or unusable.
+ *
+ * This is deliberately its own type so `withErrorHandling` can tell an
+ * operator mistake apart from a genuine bug in the code. Both used to surface
+ * as an identical opaque 500, which left no way to diagnose a failed sign-up
+ * without server logs.
+ */
+export class ConfigError extends Error {
+  constructor(
+    /** The offending variable, e.g. `MONGODB_URI`. Safe to log, never a value. */
+    readonly variable: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ConfigError";
+  }
+}
+
 function required(name: string): string {
   const value = process.env[name];
   if (!value) {
-    throw new Error(
+    throw new ConfigError(
+      name,
       `Missing required environment variable ${name}. See .env.example.`,
     );
   }
@@ -28,7 +49,11 @@ export const env = {
   get jwtSecret() {
     const secret = required("JWT_SECRET");
     if (secret.length < 32) {
-      throw new Error("JWT_SECRET must be at least 32 characters long.");
+      throw new ConfigError(
+        "JWT_SECRET",
+        "JWT_SECRET must be at least 32 characters long. " +
+          "Generate one with: openssl rand -base64 48",
+      );
     }
     return secret;
   },

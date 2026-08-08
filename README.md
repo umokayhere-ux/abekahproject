@@ -26,6 +26,7 @@ split, and the app is built to deploy to Vercel with MongoDB Atlas.
 - [Deploying to Vercel](#deploying-to-vercel)
 - [How payments work](#how-payments-work)
 - [Security model](#security-model)
+- [Troubleshooting](#troubleshooting)
 - [Project structure](#project-structure)
 
 ---
@@ -89,6 +90,15 @@ Open <http://localhost:3000>.
 The minimum to boot is `MONGODB_URI` and `JWT_SECRET`. Without Paystack the app
 runs but payments are disabled; without Cloudinary, listing photos can still be
 added by URL but the upload button is unavailable.
+
+Check your configuration at any time:
+
+```bash
+curl http://localhost:3000/api/health
+```
+
+It reports which integrations are configured and whether the database is
+reachable — see [Troubleshooting](#troubleshooting).
 
 Generate a secret with:
 
@@ -425,6 +435,77 @@ Two properties of this flow matter:
 - **Destructive resets** require an admin JWT, a recognised scope, and the
   exact string `RESET`. Administrator accounts survive every scope.
 - **Error responses** carry no stack traces in production.
+
+---
+
+## Troubleshooting
+
+### Start here: the health check
+
+```bash
+curl https://your-domain.com/api/health
+```
+
+```jsonc
+{
+  "success": true,
+  "data": {
+    "status": "degraded",
+    "canAuthenticate": false,
+    "problems": ["MONGODB_URI is not set"],
+    // ...per-integration booleans
+  }
+}
+```
+
+It returns `200` when sign-up and sign-in can work and `503` when they cannot,
+and lists exactly what is missing. It reports only *whether* each thing is
+configured — never a connection string, key, or secret — so it is safe to leave
+unauthenticated, which matters because you most need it when authentication
+itself is broken.
+
+### "This deployment is missing required configuration (X)"
+
+An environment variable is absent. Set it and redeploy. On Vercel, remember
+that **adding a variable does not apply to an existing deployment** — you must
+redeploy afterwards.
+
+### "Cannot reach the database right now"
+
+`MONGODB_URI` is set but the database is unreachable. In order of likelihood:
+
+1. **Atlas Network Access.** Vercel functions have no fixed outbound IP, so the
+   allowlist must include `0.0.0.0/0`. This is the most common cause of sign-up
+   working locally but failing once deployed.
+2. **Wrong password in the URI.** Atlas passwords with `@`, `/`, or `:` must be
+   percent-encoded.
+3. **Missing database name.** The URI needs `/rentfinder` before the `?`.
+4. **Cluster paused.** Free-tier clusters pause after inactivity.
+
+### "Something went wrong. Please try again."
+
+This message now means a genuine unexpected error, not a configuration
+problem — configuration and connectivity failures report themselves specifically
+(above). The details are in your server logs: **Vercel → your project →
+Logs**, or the terminal running `npm start`. Every such error is logged with an
+`[api]` prefix.
+
+### Sign-in says my password is wrong, but it is right
+
+If you changed `JWT_SECRET`, every existing session was invalidated — sign in
+again. If you changed `ADMIN_PASSWORD`, the admin password is re-synced from the
+environment on the next cold start, so the *new* value is the correct one.
+
+### No administrator account exists
+
+`ADMIN_EMAIL` and `ADMIN_PASSWORD` must both be set. Seeding runs lazily on the
+first authentication request after a cold start, so visit `/auth/login` once
+after deploying, then sign in with those credentials.
+
+### Payments say the landlord has no payout account
+
+Expected until that landlord completes **Dashboard → Bank details**. Payments
+cannot be initialised without a Paystack subaccount to route the 90% share to.
 
 ---
 
