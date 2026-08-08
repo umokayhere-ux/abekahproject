@@ -34,6 +34,20 @@ export async function GET() {
     email: { configured: Boolean(env.smtp) },
   };
 
+  /*
+   * Which deployment is answering. A variable scoped only to Production is
+   * invisible to a Preview build, which is the most common reason setting one
+   * "does nothing" — a branch that is not the Production Branch deploys as a
+   * Preview. None of these values are secret; Vercel exposes them to the build.
+   */
+  const deployment = {
+    platform: process.env.VERCEL ? "vercel" : "self-hosted",
+    // "production" | "preview" | "development" on Vercel.
+    environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? "unknown",
+    branch: process.env.VERCEL_GIT_COMMIT_REF,
+    commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7),
+  };
+
   let databaseError: string | undefined;
   if (checks.database.configured) {
     try {
@@ -50,10 +64,23 @@ export async function GET() {
     checks.database.reachable && checks.jwt.configured && checks.jwt.longEnough;
 
   const problems: string[] = [];
-  if (!checks.database.configured) problems.push("MONGODB_URI is not set");
-  else if (!checks.database.reachable) problems.push(databaseError!);
-  if (!checks.jwt.configured) problems.push("JWT_SECRET is not set");
-  else if (!checks.jwt.longEnough) {
+  if (!checks.database.configured) {
+    problems.push(
+      deployment.environment === "preview"
+        ? "MONGODB_URI is not set for this PREVIEW deployment. Check the " +
+            "variable is scoped to Preview, then redeploy."
+        : "MONGODB_URI is not set",
+    );
+  } else if (!checks.database.reachable) problems.push(databaseError!);
+  if (!checks.jwt.configured) {
+    problems.push(
+      deployment.environment === "preview"
+        ? "JWT_SECRET is not set for this PREVIEW deployment. A variable " +
+            "scoped only to Production is not visible here — tick Preview " +
+            "too, then redeploy."
+        : "JWT_SECRET is not set",
+    );
+  } else if (!checks.jwt.longEnough) {
     problems.push("JWT_SECRET is shorter than 32 characters");
   }
   if (!checks.adminSeed.configured) {
@@ -67,6 +94,7 @@ export async function GET() {
       success: true,
       data: {
         status: canAuthenticate ? "ok" : "degraded",
+        deployment,
         canAuthenticate,
         canAcceptPayments: checks.paystack.configured,
         canUploadImages: checks.cloudinary.configured,
