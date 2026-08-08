@@ -25,6 +25,21 @@ function secretKey(): Uint8Array {
   return new TextEncoder().encode(env.jwtSecret);
 }
 
+/**
+ * Fails immediately if the signing secret is absent or too short.
+ *
+ * Call this *before* any database write in a handler that will later issue a
+ * token. Registration otherwise creates the account, then throws while signing
+ * — leaving an orphaned user whose owner was told sign-up failed, and who then
+ * hits "email already exists" when they retry.
+ *
+ * Reading the getter is the check: it throws `ConfigError`, which the API layer
+ * turns into an actionable 503.
+ */
+export function assertAuthConfigured(): void {
+  void env.jwtSecret;
+}
+
 export async function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, BCRYPT_ROUNDS);
 }

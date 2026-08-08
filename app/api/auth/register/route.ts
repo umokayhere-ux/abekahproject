@@ -1,7 +1,12 @@
 import { connectDB } from "@/lib/db";
 import { clientIp, fail, ok, withErrorHandling } from "@/lib/api";
 import { Validator, readJson } from "@/lib/validate";
-import { hashPassword, signToken, toSafeUser } from "@/lib/auth";
+import {
+  assertAuthConfigured,
+  hashPassword,
+  signToken,
+  toSafeUser,
+} from "@/lib/auth";
 import { ACTIONS, logActivity } from "@/lib/activity";
 import { ensureAdminSeeded } from "@/lib/seed-admin";
 import { User } from "@/models/User";
@@ -29,6 +34,11 @@ export const POST = withErrorHandling(async (request: Request) => {
   const phone = v.phone("phone", false);
   const role = v.enum("role", PUBLIC_ROLES, { required: false }) ?? "tenant";
   v.assert();
+
+  // Checked before any write: a token is issued at the end of this handler, and
+  // failing there would leave an account created but the caller told sign-up
+  // failed — who would then be blocked by "email already exists" on retry.
+  assertAuthConfigured();
 
   await connectDB();
   await ensureAdminSeeded();

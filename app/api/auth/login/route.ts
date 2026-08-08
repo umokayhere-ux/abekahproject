@@ -1,7 +1,12 @@
 import { connectDB } from "@/lib/db";
 import { clientIp, fail, ok, withErrorHandling } from "@/lib/api";
 import { Validator, readJson } from "@/lib/validate";
-import { signToken, toSafeUser, verifyPassword } from "@/lib/auth";
+import {
+  assertAuthConfigured,
+  signToken,
+  toSafeUser,
+  verifyPassword,
+} from "@/lib/auth";
 import { ACTIONS, logActivity } from "@/lib/activity";
 import { ensureAdminSeeded } from "@/lib/seed-admin";
 import { User } from "@/models/User";
@@ -19,6 +24,10 @@ export const POST = withErrorHandling(async (request: Request) => {
   // Presence check only — an existing weak password must still be able to log in.
   const password = v.string("password", { label: "Password", max: 128 });
   v.assert();
+
+  // Checked first: `ensureAdminSeeded` below writes to the database, and a
+  // token is issued at the end. Failing early avoids doing either pointlessly.
+  assertAuthConfigured();
 
   await connectDB();
   // Runs before the lookup so the very first login can be the seeded admin.
