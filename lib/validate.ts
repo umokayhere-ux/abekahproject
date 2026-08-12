@@ -291,6 +291,31 @@ export function escapeRegex(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/**
+ * Normalises a Ghanaian mobile money number to the local ten-digit form
+ * (`0XXXXXXXXX`), which is how wallets are identified domestically.
+ *
+ * Accepts what people actually type — `+233 24 412 3456`, `233244123456`,
+ * `024-412-3456` — and returns `null` if it is not a plausible Ghanaian
+ * number. Returning the local form matters: the value is sent to Paystack as
+ * the account number for a mobile money subaccount.
+ */
+export function normalizeMomoNumber(input: string): string | null {
+  const compact = input.replace(/[\s\-()+]/g, "");
+
+  // 233244123456 or +233244123456 → 0244123456
+  if (/^233\d{9}$/.test(compact)) return `0${compact.slice(3)}`;
+  // Already local.
+  if (/^0\d{9}$/.test(compact)) return compact;
+  // National format missing its leading zero, e.g. 244123456. The first digit
+  // must be non-zero: a nine-digit string that already starts with 0 is a
+  // truncated local number, not a national one, and prefixing it would
+  // silently produce a plausible-looking but wrong wallet number.
+  if (/^[1-9]\d{8}$/.test(compact)) return `0${compact}`;
+
+  return null;
+}
+
 /** Validates a path parameter id, throwing a 400 rather than a cast error. */
 export function requireObjectId(id: string, label = "id"): string {
   if (!mongoose.isValidObjectId(id)) {

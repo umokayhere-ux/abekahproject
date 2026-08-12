@@ -81,20 +81,58 @@ export interface PaystackBank {
   name: string;
   code: string;
   currency: string;
+  /** Paystack's own classification, e.g. "mobile_money" or "ghipss". */
   type: string;
 }
 
-/** Ghanaian banks and mobile-money providers supported by Paystack. */
-export async function listBanks(): Promise<PaystackBank[]> {
+/**
+ * True when an entry is a mobile money wallet rather than a bank.
+ *
+ * Matched loosely against both the type and the name, because the exact label
+ * is Paystack's to choose and has changed before. A provider that slips
+ * through is still selectable — it just appears under Bank — so a bad guess
+ * degrades the grouping rather than hiding the option.
+ */
+export function isMobileMoney(entry: PaystackBank): boolean {
+  const haystack = `${entry.type} ${entry.name}`.toLowerCase();
+  return (
+    /mobile[\s_-]?money|momo/.test(haystack) ||
+    // The three Ghanaian wallet brands, in case the type is unhelpful.
+    /\b(mtn|vodafone|telecel|airteltigo|airtel|tigo)\b/.test(haystack)
+  );
+}
+
+export interface GhanaPayoutDestinations {
+  banks: PaystackBank[];
+  mobileMoney: PaystackBank[];
+}
+
+/**
+ * Ghanaian banks and mobile money providers supported by Paystack, split into
+ * the two groups the payout form offers.
+ *
+ * The grouping is derived from the live response rather than a hardcoded list,
+ * so new providers appear without a code change.
+ */
+export async function listPayoutDestinations(): Promise<GhanaPayoutDestinations> {
   const data = await paystackFetch<PaystackBank[]>(
     "/bank?country=ghana&currency=GHS",
   );
-  return data.map((bank) => ({
+
+  const entries = data.map((bank) => ({
     name: bank.name,
     code: bank.code,
     currency: bank.currency,
     type: bank.type,
   }));
+
+  const byName = (a: PaystackBank, b: PaystackBank) =>
+    a.name.localeCompare(b.name);
+
+  return {
+    banks: entries.filter((entry) => !isMobileMoney(entry)).sort(byName),
+    mobileMoney: entries.filter(isMobileMoney).sort(byName),
+  };
 }
 
 export interface ResolvedAccount {

@@ -23,6 +23,10 @@ export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 export const PAYMENT_STATUSES = ["pending", "paid", "failed"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
+/** How a landlord receives their money. */
+export const PAYOUT_CHANNELS = ["bank", "mobile_money"] as const;
+export type PayoutChannel = (typeof PAYOUT_CHANNELS)[number];
+
 export const RESET_SCOPES = [
   "properties",
   "bookings",
@@ -46,6 +50,9 @@ export interface SafeUser {
   favorites?: string[];
   /** Presence only — the raw subaccount code is not needed by the browser. */
   hasPayoutAccount?: boolean;
+  /** Whether payouts settle to a bank account or a mobile money wallet. */
+  payoutChannel?: PayoutChannel;
+  /** Provider name: a bank, or a wallet such as "MTN Mobile Money". */
   bankName?: string;
   /** Masked to the last 4 digits. */
   bankAccountLast4?: string;

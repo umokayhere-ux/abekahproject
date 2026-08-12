@@ -1,5 +1,5 @@
 import mongoose, { Schema, type Model, type Types } from "mongoose";
-import { ROLES, type Role } from "@/types";
+import { PAYOUT_CHANNELS, ROLES, type PayoutChannel, type Role } from "@/types";
 
 export interface UserDoc {
   _id: Types.ObjectId;
@@ -15,6 +15,8 @@ export interface UserDoc {
   suspended: boolean;
   favorites: Types.ObjectId[];
   paystackSubaccount?: string;
+  /** Bank account or mobile money wallet. Absent until payouts are set up. */
+  payoutChannel?: PayoutChannel;
   bankName?: string;
   bankCode?: string;
   bankAccountNumber?: string;
@@ -68,6 +70,10 @@ const userSchema = new Schema<UserDoc>(
 
     // Payout details (landlords only).
     paystackSubaccount: { type: String, select: false },
+    payoutChannel: {
+      type: String,
+      enum: PAYOUT_CHANNELS as unknown as string[],
+    },
     bankName: { type: String, default: "" },
     bankCode: { type: String, select: false },
     bankAccountNumber: { type: String, select: false },

@@ -116,6 +116,7 @@ export function toSafeUser(user: UserDoc): SafeUser {
     suspended: Boolean(user.suspended),
     favorites: (user.favorites ?? []).map((id) => id.toString()),
     hasPayoutAccount: Boolean(user.paystackSubaccount),
+    payoutChannel: user.payoutChannel,
     bankName: user.bankName ?? "",
     bankAccountLast4: accountNumber ? accountNumber.slice(-4) : undefined,
     createdAt: user.createdAt?.toISOString(),

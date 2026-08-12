@@ -38,12 +38,12 @@ export function LandlordOverview({
                 Set up your payout account
               </p>
               <p className="mt-0.5 text-sm text-amber-800">
-                Tenants cannot pay for your properties until your bank details
-                are connected to Paystack.
+                Tenants cannot pay for your properties until you connect a
+                mobile money wallet or bank account.
               </p>
             </div>
           </div>
-          <Button onClick={() => onNavigate("payouts")}>Add bank details</Button>
+          <Button onClick={() => onNavigate("payouts")}>Set up payouts</Button>
         </div>
       )}
 

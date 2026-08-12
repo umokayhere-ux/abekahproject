@@ -86,7 +86,7 @@ export function LandlordDashboard() {
       icon: MessageSquare,
       badge: stats?.unreadMessages,
     },
-    { id: "payouts", label: "Bank details", icon: Wallet },
+    { id: "payouts", label: "Get paid", icon: Wallet },
     { id: "profile", label: "Profile", icon: UserCog },
   ];
 

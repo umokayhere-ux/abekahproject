@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 const SECTIONS = [
   {
     heading: "What we collect",
-    body: "Your name, email address, phone number, and anything you choose to add to your profile. Landlords who set up payouts also provide bank details, which are sent to Paystack and stored only in the minimum form needed to identify the account.",
+    body: "Your name, email address, phone number, and anything you choose to add to your profile. Landlords who set up payouts also provide a mobile money number or bank account, which is sent to Paystack and stored only in the minimum form needed to identify the destination.",
   },
   {
     heading: "How we use it",

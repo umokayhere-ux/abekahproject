@@ -210,10 +210,20 @@ Indexes are declared on the schemas and created automatically by Mongoose.
    Paystack cannot reach `localhost`. To test webhooks locally, tunnel with
    something like `ngrok http 3000` and use the public URL.
 
-4. Subaccounts are created automatically. Each landlord connects their bank
-   from **Dashboard → Bank details**; the app resolves the account with
-   Paystack, creates a subaccount with a 90% `percentage_charge`, and stores
-   only the resulting subaccount code and the last four digits of the number.
+4. Subaccounts are created automatically. Each landlord connects a payout
+   destination from **Dashboard → Get paid** — either a **mobile money wallet**
+   (MTN, Telecel, AirtelTigo) or a bank account. The app resolves the
+   destination with Paystack, creates a subaccount with a 90%
+   `percentage_charge`, and stores only the resulting subaccount code and the
+   last four digits of the number.
+
+   Mobile money is offered first, since it is how most Ghanaian landlords are
+   paid. Numbers are accepted in any common form (`0244123456`,
+   `+233244123456`, `024 412 3456`) and normalised to the local ten-digit form
+   Paystack expects. The provider list is read live from Paystack and split
+   into wallets and banks, so new providers appear without a code change; if
+   your Paystack account returns no wallets, the option is hidden rather than
+   shown empty.
 
 **Test cards** are in the [Paystack docs](https://paystack.com/docs/payments/test-payments/).
 
