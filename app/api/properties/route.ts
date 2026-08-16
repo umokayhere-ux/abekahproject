@@ -1,6 +1,6 @@
 import type { QueryFilter } from "mongoose";
 import { connectDB } from "@/lib/db";
-import { clientIp, ok, withErrorHandling } from "@/lib/api";
+import { clientIp, fail, ok, withErrorHandling } from "@/lib/api";
 import {
   Validator,
   escapeRegex,
@@ -10,6 +10,8 @@ import {
 import { requireRole } from "@/lib/auth";
 import { ACTIONS, logActivity } from "@/lib/activity";
 import { LANDLORD_PUBLIC_FIELDS, serializeProperty } from "@/lib/serialize";
+import { registrationFeeGhs } from "@/lib/env";
+import { formatGHS } from "@/lib/money";
 import { Property, type PropertyDoc } from "@/models/Property";
 import { PROPERTY_STATUSES, PROPERTY_TYPES, type Paginated, type PropertyDTO } from "@/types";
 
@@ -146,6 +148,18 @@ export const POST = withErrorHandling(async (request: Request) => {
   v.assert();
 
   await connectDB();
+
+  /*
+   * Landlords must have paid the one-off listing fee. Admins are exempt: they
+   * act on the platform's behalf, not as a paying landlord. Checked against
+   * the freshly loaded user, so a stale client cannot bypass it.
+   */
+  if (auth.role === "landlord" && !auth.user.registrationFeePaid) {
+    return fail(
+      `Please pay your one-off ${formatGHS(registrationFeeGhs())} registration fee before publishing a listing.`,
+      402,
+    );
+  }
 
   const property = await Property.create({
     title,

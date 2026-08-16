@@ -10,6 +10,7 @@ import { Pagination } from "@/components/ui/Pagination";
 import { ErrorState, LoadingState } from "@/components/ui/States";
 import { useApiResource } from "@/hooks/useApiResource";
 import { formatGHS } from "@/lib/money";
+import { describePayment } from "@/lib/payment-label";
 import type { Paginated, PaymentDTO, SafeUser } from "@/types";
 
 interface PaymentsResponse extends Paginated<PaymentDTO> {
@@ -51,9 +52,7 @@ export function AdminPayments() {
         <div className="min-w-0">
           <p className="font-mono text-xs text-ink-900">{payment.reference}</p>
           <p className="truncate text-xs text-ink-500">
-            {typeof payment.property === "string"
-              ? "Property"
-              : payment.property.title}
+            {describePayment(payment)}
           </p>
         </div>
       ),

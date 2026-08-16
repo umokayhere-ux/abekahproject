@@ -17,6 +17,9 @@ export interface UserDoc {
   paystackSubaccount?: string;
   /** Bank account or mobile money wallet. Absent until payouts are set up. */
   payoutChannel?: PayoutChannel;
+  /** Landlords only: the one-off listing fee has been paid and settled. */
+  registrationFeePaid: boolean;
+  registrationFeePaidAt?: Date;
   bankName?: string;
   bankCode?: string;
   bankAccountNumber?: string;
@@ -74,6 +77,10 @@ const userSchema = new Schema<UserDoc>(
       type: String,
       enum: PAYOUT_CHANNELS as unknown as string[],
     },
+    // Only meaningful for landlords; set by the payment webhook, never by a
+    // client, so the gate cannot be lifted without money actually arriving.
+    registrationFeePaid: { type: Boolean, default: false, index: true },
+    registrationFeePaidAt: { type: Date },
     bankName: { type: String, default: "" },
     bankCode: { type: String, select: false },
     bankAccountNumber: { type: String, select: false },

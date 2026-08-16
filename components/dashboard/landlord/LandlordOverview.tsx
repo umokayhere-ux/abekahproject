@@ -8,21 +8,29 @@ import { Button } from "@/components/ui/Button";
 import { LoadingState } from "@/components/ui/States";
 import { formatGHS } from "@/lib/money";
 import type { LandlordStats } from "./LandlordDashboard";
+import { RegistrationFeeBanner } from "./RegistrationFeeBanner";
 import type { PropertyDTO, SafeUser } from "@/types";
 
 export function LandlordOverview({
   stats,
   onNavigate,
+  onRefresh,
 }: {
   stats: LandlordStats | null;
   onNavigate: (tab: string) => void;
+  onRefresh: () => void;
 }) {
   if (!stats) return <LoadingState label="Loading your overview" />;
 
   return (
     <div className="space-y-6">
+      {/* The fee gates listing entirely, so it outranks the payout prompt. */}
+      {!stats.registrationFeePaid && (
+        <RegistrationFeeBanner onPaid={onRefresh} />
+      )}
+
       {/* Without a payout account, payments for this landlord cannot be
-          initialised at all — so this is the first thing they should see. */}
+          initialised at all — so this is the next thing they should see. */}
       {!stats.payoutConfigured && (
         <div
           role="alert"

@@ -16,6 +16,7 @@ import { RoleBadge, StatusBadge, VerifiedBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { LoadingState } from "@/components/ui/States";
 import { formatGHS } from "@/lib/money";
+import { describePayment } from "@/lib/payment-label";
 import type { AdminStats } from "./AdminDashboard";
 
 export function AdminOverview({
@@ -215,9 +216,7 @@ export function AdminOverview({
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-ink-900">
-                    {typeof payment.property === "string"
-                      ? "Property"
-                      : payment.property.title}
+                    {describePayment(payment)}
                   </p>
                   <p className="truncate font-mono text-xs text-ink-500">
                     {payment.reference}

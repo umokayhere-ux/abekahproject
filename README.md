@@ -4,8 +4,9 @@ A rental marketplace for Ghana. Tenants discover, save, book, and pay for
 rooms, apartments, houses, and studios; landlords list properties and receive
 rent directly to their bank account; administrators oversee the whole platform.
 
-Prices are in Ghana cedis (GHS), payments run through Paystack with a 90/10
-split, and the app is built to deploy to Vercel with MongoDB Atlas.
+Prices are in Ghana cedis (GHS), payments run through Paystack — a one-off
+GHS 50 landlord registration fee plus a 5% commission on rent — and the app is
+built to deploy to Vercel with MongoDB Atlas.
 
 ---
 
@@ -40,8 +41,9 @@ Paystack, message landlords, review a property after a confirmed stay, and
 manage their profile and payment history.
 
 ### Landlords
-Create and manage listings with photo uploads, review and confirm booking
-requests, connect a bank account for payouts, message tenants, and track
+Pay a one-off GHS 50 registration fee to unlock listing, then create and manage
+listings with photo uploads, review and confirm booking requests, connect a
+mobile money wallet or bank account for payouts, message tenants, and track
 earnings, views, and bookings.
 
 ### Administrators
@@ -165,7 +167,8 @@ email is not sent.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `NEXT_PUBLIC_APP_URL` | inferred | Base URL for reset links and Paystack callbacks. Inferred automatically on Vercel; set it explicitly for a custom domain. |
-| `PLATFORM_COMMISSION_PERCENT` | `10` | Commission, absorbed by the landlord. Values outside 0–100 fall back to 10. |
+| `LANDLORD_REGISTRATION_FEE_GHS` | `50` | One-off fee a landlord pays before publishing. Goes wholly to the platform. |
+| `PLATFORM_COMMISSION_PERCENT` | `5` | Commission on rent, absorbed by the landlord. Values outside 0–100 fall back to 5. |
 | `PAYMENT_INCLUDE_DEPOSIT` | `true` | Whether the first payment bundles a deposit. |
 | `PAYMENT_DEPOSIT_MONTHS` | `1` | Deposit size, in months of rent. |
 
@@ -213,7 +216,7 @@ Indexes are declared on the schemas and created automatically by Mongoose.
 4. Subaccounts are created automatically. Each landlord connects a payout
    destination from **Dashboard → Get paid** — either a **mobile money wallet**
    (MTN, Telecel, AirtelTigo) or a bank account. The app resolves the
-   destination with Paystack, creates a subaccount with a 90%
+   destination with Paystack, creates a subaccount with a 95%
    `percentage_charge`, and stores only the resulting subaccount code and the
    last four digits of the number.
 
@@ -377,17 +380,37 @@ it works on Vercel's serverless runtime without adjustment.
 
 ## How payments work
 
+There are two kinds of payment.
+
+### 1. Landlord registration fee — GHS 50, one-off
+
+A landlord must pay this before they can publish a listing. It settles wholly
+to the platform account, so **no subaccount or split is involved** and it can
+be paid before payout details are set up.
+
+The account is created at sign-up and the landlord can sign in immediately;
+only *publishing* is gated. Taking the payment mid-signup would leave an
+orphaned half-account whenever a card was declined.
+
+The flag is set **only** by the payment webhook — never by a client request —
+so listing cannot be unlocked without money actually arriving.
+
+### 2. Rent — 5% platform commission
+
 Rent is GHS 1,000. The tenant pays **exactly** the listed rent — the landlord
 absorbs the platform commission, so there is no surprise markup at checkout.
 
 ```
 Tenant pays      GHS 1,000
-Platform keeps   GHS   100   (10%)
-Landlord gets    GHS   900   (90%)
+Platform keeps   GHS    50   (5%)
+Landlord gets    GHS   950   (95%)
 ```
 
+The landlord's 95% is routed to their Paystack subaccount via
+`percentage_charge`; the platform keeps the remainder.
+
 By default the first payment also includes a one-month deposit, so the tenant
-is charged GHS 2,000 and the same 90/10 split applies to the total. This is
+is charged GHS 2,000 and the same 95/5 split applies to the total. This is
 configurable via `PAYMENT_INCLUDE_DEPOSIT` and `PAYMENT_DEPOSIT_MONTHS`.
 
 The flow:
@@ -515,7 +538,7 @@ after deploying, then sign in with those credentials.
 ### Payments say the landlord has no payout account
 
 Expected until that landlord completes **Dashboard → Bank details**. Payments
-cannot be initialised without a Paystack subaccount to route the 90% share to.
+cannot be initialised without a Paystack subaccount to route the 95% share to.
 
 ---
 

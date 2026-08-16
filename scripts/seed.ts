@@ -242,8 +242,19 @@ async function upsertUser(input: {
   bio?: string;
   verified: boolean;
 }) {
+  // Demo landlords are marked as having paid the listing fee, so the seeded
+  // data is usable without putting a real charge through Paystack.
+  const registrationFeePaid = input.role === "landlord";
+
   const existing = await User.findOne({ email: input.email });
   if (existing) {
+    // Backfill for demo data seeded before the fee existed.
+    if (registrationFeePaid && !existing.registrationFeePaid) {
+      await User.updateOne(
+        { _id: existing._id },
+        { $set: { registrationFeePaid: true, registrationFeePaidAt: new Date() } },
+      );
+    }
     console.log(`  · ${input.role} ${input.email} already exists`);
     return existing;
   }
@@ -252,6 +263,8 @@ async function upsertUser(input: {
     ...input,
     password: await hashPassword(DEMO_PASSWORD),
     suspended: false,
+    registrationFeePaid,
+    registrationFeePaidAt: registrationFeePaid ? new Date() : undefined,
   });
   console.log(`  + created ${input.role} ${input.email}`);
   return user;
@@ -389,6 +402,7 @@ async function main() {
         amount: split.total,
         currency: "GHS",
         status: "paid",
+        purpose: "rent",
         reference: "RF-DEMO-SEED-0001",
         splitBreakdown: split,
         paidAt: new Date(),

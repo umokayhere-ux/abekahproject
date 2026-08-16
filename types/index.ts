@@ -23,6 +23,13 @@ export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 export const PAYMENT_STATUSES = ["pending", "paid", "failed"] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
+/**
+ * What a payment is for. Rent splits to the landlord's subaccount; the
+ * registration fee goes entirely to the platform.
+ */
+export const PAYMENT_PURPOSES = ["rent", "registration_fee"] as const;
+export type PaymentPurpose = (typeof PAYMENT_PURPOSES)[number];
+
 /** How a landlord receives their money. */
 export const PAYOUT_CHANNELS = ["bank", "mobile_money"] as const;
 export type PayoutChannel = (typeof PAYOUT_CHANNELS)[number];
@@ -52,6 +59,8 @@ export interface SafeUser {
   hasPayoutAccount?: boolean;
   /** Whether payouts settle to a bank account or a mobile money wallet. */
   payoutChannel?: PayoutChannel;
+  /** Landlords only: whether the one-off listing fee has been paid. */
+  registrationFeePaid?: boolean;
   /** Provider name: a bank, or a wallet such as "MTN Mobile Money". */
   bankName?: string;
   /** Masked to the last 4 digits. */
@@ -121,13 +130,16 @@ export interface SplitBreakdown {
 
 export interface PaymentDTO {
   _id: string;
+  /** The payer. For a registration fee this is the landlord themselves. */
   tenant: string | SafeUser;
   landlord: string | SafeUser;
-  property: string | PropertyDTO;
+  /** Absent for a registration fee, which is not tied to a listing. */
+  property?: string | PropertyDTO;
   booking?: string | BookingDTO;
   amount: number;
   currency: "GHS";
   status: PaymentStatus;
+  purpose?: PaymentPurpose;
   reference: string;
   splitBreakdown?: SplitBreakdown;
   paidAt?: string;

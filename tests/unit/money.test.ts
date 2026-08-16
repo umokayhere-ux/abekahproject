@@ -9,16 +9,16 @@ describe("computeSplit", () => {
   beforeEach(() => {
     // Deposit off by default so the base case is exactly the rent.
     process.env.PAYMENT_INCLUDE_DEPOSIT = "false";
-    process.env.PLATFORM_COMMISSION_PERCENT = "10";
+    delete process.env.PLATFORM_COMMISSION_PERCENT;
   });
 
-  it("splits GHS 1,000 rent into 900 landlord / 100 platform", () => {
+  it("splits GHS 1,000 rent into 950 landlord / 50 platform", () => {
     const split = computeSplit(1000);
 
     expect(split.total).toBe(1000);
-    expect(split.platform).toBe(100);
-    expect(split.landlord).toBe(900);
-    expect(split.commissionPercent).toBe(10);
+    expect(split.platform).toBe(50);
+    expect(split.landlord).toBe(950);
+    expect(split.commissionPercent).toBe(5);
   });
 
   it("charges the tenant exactly the listed rent", () => {
@@ -46,8 +46,8 @@ describe("computeSplit", () => {
     expect(split.deposit).toBe(1000);
     // First month plus a one-month deposit.
     expect(split.total).toBe(2000);
-    expect(split.platform).toBe(200);
-    expect(split.landlord).toBe(1800);
+    expect(split.platform).toBe(100);
+    expect(split.landlord).toBe(1900);
   });
 
   it("honours a configured deposit of more than one month", () => {
@@ -69,12 +69,12 @@ describe("computeSplit", () => {
     expect(split.commissionPercent).toBe(15);
   });
 
-  it("falls back to 10% when the configured rate is nonsense", () => {
+  it("falls back to 5% when the configured rate is nonsense", () => {
     // A misconfigured deployment must never charge a zero or negative
     // commission, nor more than the whole payment.
     for (const bad of ["-5", "abc", "150", ""]) {
       process.env.PLATFORM_COMMISSION_PERCENT = bad;
-      expect(computeSplit(1000).commissionPercent).toBe(10);
+      expect(computeSplit(1000).commissionPercent).toBe(5);
     }
   });
 

@@ -32,6 +32,7 @@ export interface LandlordStats {
   paymentsReceived: number;
   unreadMessages: number;
   payoutConfigured: boolean;
+  registrationFeePaid: boolean;
   recentBookings: BookingDTO[];
   recentPayments: PaymentDTO[];
 }
@@ -100,9 +101,18 @@ export function LandlordDashboard() {
       ready={ready}
     >
       {activeTab === "overview" && (
-        <LandlordOverview stats={stats} onNavigate={setTab} />
+        <LandlordOverview
+          stats={stats}
+          onNavigate={setTab}
+          onRefresh={loadStats}
+        />
       )}
-      {activeTab === "properties" && <MyProperties onChanged={loadStats} />}
+      {activeTab === "properties" && (
+        <MyProperties
+          onChanged={loadStats}
+          feePaid={stats?.registrationFeePaid ?? true}
+        />
+      )}
       {activeTab === "bookings" && <LandlordBookings onChanged={loadStats} />}
       {activeTab === "messages" && <MessagesPanel onChanged={loadStats} />}
       {activeTab === "payouts" && <PayoutSetup onConfigured={loadStats} />}

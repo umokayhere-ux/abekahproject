@@ -109,21 +109,37 @@ export const env = {
 };
 
 /**
+ * One-off fee a landlord pays to list on the platform, in GHS.
+ *
+ * Goes entirely to the platform account — no subaccount, no split — so it is
+ * charged independently of any landlord payout setup.
+ */
+export function registrationFeeGhs(): number {
+  const raw = optional("LANDLORD_REGISTRATION_FEE_GHS");
+  if (raw === undefined) return 50;
+
+  const value = Number(raw);
+  // A zero or negative fee would create an uncollectable charge, so fall back.
+  if (!Number.isFinite(value) || value <= 0) return 50;
+  return value;
+}
+
+/**
  * Platform commission, in percent, absorbed by the landlord.
  *
  * Read on each access rather than captured at module load, so it stays
  * consistent with the rest of this module and can be varied in tests. Falls
- * back to 10 if the value is missing or nonsensical — a bad env var must never
+ * back to 5 if the value is missing or nonsensical — a bad env var must never
  * silently produce a zero or negative commission.
  */
 export function platformCommissionPercent(): number {
   // `?? ` alone is not enough: an env var set to "" is present but empty, and
   // Number("") is 0 — which would silently waive the commission entirely.
   const raw = optional("PLATFORM_COMMISSION_PERCENT");
-  if (raw === undefined) return 10;
+  if (raw === undefined) return 5;
 
   const value = Number(raw);
-  if (!Number.isFinite(value) || value < 0 || value > 100) return 10;
+  if (!Number.isFinite(value) || value < 0 || value > 100) return 5;
   return value;
 }
 

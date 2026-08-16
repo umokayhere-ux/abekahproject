@@ -1,12 +1,20 @@
 import mongoose, { Schema, type Model, type Types } from "mongoose";
-import { PAYMENT_STATUSES, type PaymentStatus } from "@/types";
+import {
+  PAYMENT_PURPOSES,
+  PAYMENT_STATUSES,
+  type PaymentPurpose,
+  type PaymentStatus,
+} from "@/types";
 
 export interface PaymentDoc {
   _id: Types.ObjectId;
+  /** The payer. For a registration fee this is the landlord themselves. */
   tenant: Types.ObjectId;
   landlord: Types.ObjectId;
-  property: Types.ObjectId;
+  /** Absent for a registration fee, which is not tied to a listing. */
+  property?: Types.ObjectId;
   booking?: Types.ObjectId;
+  purpose: PaymentPurpose;
   /** Amount charged to the tenant, in GHS (major units). */
   amount: number;
   currency: "GHS";
@@ -44,10 +52,19 @@ const paymentSchema = new Schema<PaymentDoc>(
     property: {
       type: Schema.Types.ObjectId,
       ref: "Property",
-      required: true,
+      // Required for rent, absent for a registration fee.
+      required: function (this: { purpose?: PaymentPurpose }) {
+        return this.purpose !== "registration_fee";
+      },
       index: true,
     },
     booking: { type: Schema.Types.ObjectId, ref: "Booking", index: true },
+    purpose: {
+      type: String,
+      enum: PAYMENT_PURPOSES as unknown as string[],
+      default: "rent",
+      index: true,
+    },
     amount: { type: Number, required: true, min: [1, "Amount must be positive"] },
     currency: { type: String, enum: ["GHS"], default: "GHS" },
     status: {

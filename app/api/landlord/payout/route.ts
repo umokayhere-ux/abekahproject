@@ -54,8 +54,8 @@ export const GET = withErrorHandling(async (request: Request) => {
  * Ghanaian phone number for a wallet. They are validated accordingly and the
  * destination is resolved with Paystack before anything is created.
  *
- * `percentage_charge` is the landlord's share (90%), leaving the platform's
- * 10% commission on the main account.
+ * `percentage_charge` is the landlord's share (95%), leaving the platform's
+ * 5% commission on the main account.
  */
 export const POST = withErrorHandling(async (request: Request) => {
   const auth = await requireRole(request, "landlord");

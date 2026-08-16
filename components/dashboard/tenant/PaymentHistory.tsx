@@ -9,6 +9,7 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/ui/States";
 import { ButtonLink } from "@/components/ui/Button";
 import { useApiResource } from "@/hooks/useApiResource";
 import { formatGHS } from "@/lib/money";
+import { describePayment } from "@/lib/payment-label";
 import type { Paginated, PaymentDTO } from "@/types";
 
 /** The signed-in user's payment history. Works for tenants and landlords. */
@@ -57,9 +58,7 @@ export function PaymentHistory({
       header: "Property",
       render: (payment) => (
         <span className="font-medium text-ink-900">
-          {typeof payment.property === "string"
-            ? "Property"
-            : payment.property.title}
+          {describePayment(payment)}
         </span>
       ),
     },

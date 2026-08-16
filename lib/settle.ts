@@ -5,6 +5,7 @@ import type { VerifiedTransaction } from "./paystack";
 import { Payment } from "@/models/Payment";
 import { Booking } from "@/models/Booking";
 import { Property } from "@/models/Property";
+import { User } from "@/models/User";
 
 /**
  * Applies a successful transaction to our records.
@@ -61,6 +62,32 @@ export async function settleSuccessfulPayment(
 
   if (result.modifiedCount === 0) {
     return { applied: false, reason: "already-settled" };
+  }
+
+  // A registration fee unlocks listing for the landlord; it has no booking.
+  // This is the only place the flag is set — never from a client request — so
+  // the gate cannot be lifted without money actually arriving.
+  if (payment.purpose === "registration_fee") {
+    await User.updateOne(
+      { _id: payment.landlord },
+      { $set: { registrationFeePaid: true, registrationFeePaidAt: new Date() } },
+    );
+
+    await logActivity({
+      action: ACTIONS.PAYMENT_COMPLETED,
+      actor: { _id: payment.landlord },
+      targetType: "Payment",
+      targetId: payment._id.toString(),
+      message: "Landlord registration fee paid",
+      metadata: {
+        reference: payment.reference,
+        amount: payment.amount,
+        currency: payment.currency,
+        purpose: "registration_fee",
+      },
+    });
+
+    return { applied: true };
   }
 
   // Payment is authoritative: confirm the booking and take the listing off the

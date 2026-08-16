@@ -162,7 +162,7 @@ export interface Subaccount {
  * Creates (or updates) the landlord's subaccount.
  *
  * `percentage_charge` is the share the *subaccount* receives, so the landlord's
- * 90% is expressed directly here and Paystack retains the remainder for the
+ * 95% is expressed directly here and Paystack retains the remainder for the
  * platform account.
  */
 export async function createSubaccount(input: {
@@ -224,10 +224,25 @@ export async function initializeTransaction(input: {
   email: string;
   amountCedis: number;
   reference: string;
-  subaccountCode: string;
+  /**
+   * Omit for a charge that settles wholly to the platform account, such as the
+   * landlord registration fee. When present, the landlord's share is routed to
+   * their subaccount.
+   */
+  subaccountCode?: string;
   callbackUrl: string;
   metadata?: Record<string, unknown>;
 }): Promise<InitializedTransaction> {
+  const split = input.subaccountCode
+    ? {
+        subaccount: input.subaccountCode,
+        // The landlord bears Paystack's fee alongside the platform commission,
+        // so the tenant is charged exactly the listed amount.
+        bearer: "subaccount",
+      }
+    : // No subaccount: the platform receives the whole charge and bears the fee.
+      {};
+
   return paystackFetch<InitializedTransaction>("/transaction/initialize", {
     method: "POST",
     body: {
@@ -235,10 +250,9 @@ export async function initializeTransaction(input: {
       amount: toPesewas(input.amountCedis),
       currency: "GHS",
       reference: input.reference,
-      subaccount: input.subaccountCode,
-      bearer: "subaccount",
       callback_url: input.callbackUrl,
       metadata: input.metadata,
+      ...split,
     },
   });
 }

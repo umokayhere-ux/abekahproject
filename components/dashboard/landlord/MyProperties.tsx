@@ -18,7 +18,14 @@ import { PropertyForm } from "./PropertyForm";
 import type { Paginated, PropertyDTO } from "@/types";
 
 /** The landlord's own listings, with full create/edit/delete. */
-export function MyProperties({ onChanged }: { onChanged: () => void }) {
+export function MyProperties({
+  onChanged,
+  feePaid = true,
+}: {
+  onChanged: () => void;
+  /** Listing is locked until the one-off registration fee has been paid. */
+  feePaid?: boolean;
+}) {
   const { user } = useAuth();
   const toast = useToast();
 
@@ -78,11 +85,21 @@ export function MyProperties({ onChanged }: { onChanged: () => void }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-ink-900">My properties</h2>
-        <Button onClick={openCreate}>
+        <Button onClick={openCreate} disabled={!feePaid}>
           <Plus className="size-4" aria-hidden="true" />
           Add property
         </Button>
       </div>
+
+      {!feePaid && (
+        <p
+          role="status"
+          className="rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm text-brand-900"
+        >
+          Adding listings is locked until your one-off registration fee is paid.
+          Head to <strong>Overview</strong> to pay it.
+        </p>
+      )}
 
       {loading && !data ? (
         <LoadingState label="Loading your properties" />

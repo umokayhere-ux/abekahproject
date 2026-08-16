@@ -17,8 +17,8 @@ import { User } from "@/models/User";
  * Starts a Paystack checkout for a booking.
  *
  * The charge is computed from the stored property price via `computeSplit` —
- * no amount is ever read from the request body. The landlord's 90% is routed
- * to their subaccount and the platform retains 10%.
+ * no amount is ever read from the request body. The landlord's 95% is routed
+ * to their subaccount and the platform retains 5%.
  */
 export const POST = withErrorHandling(async (request: Request) => {
   const auth = await requireRole(request, "tenant");

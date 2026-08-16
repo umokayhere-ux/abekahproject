@@ -85,6 +85,7 @@ export const GET = withErrorHandling(async (request: Request) => {
     paymentsReceived: earningsResult[0]?.count ?? 0,
     unreadMessages,
     payoutConfigured: Boolean(auth.safeUser.hasPayoutAccount),
+    registrationFeePaid: Boolean(auth.user.registrationFeePaid),
     recentBookings: recentBookings.map((b) => serializeBooking(b)),
     recentPayments: recentPayments.map(serializePayment),
   });
