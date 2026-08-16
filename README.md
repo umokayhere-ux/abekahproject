@@ -275,6 +275,20 @@ not exist, or re-synced if it does — role forced to `admin`, unsuspended,
 verified, and the password reset to whatever `ADMIN_PASSWORD` currently says.
 To rotate the admin password, change the variable and redeploy.
 
+### Adding more administrators
+
+The environment seed creates exactly one. To add others, sign in as that admin
+and use **Dashboard → Users → Add user**, choosing the *Administrator* role.
+
+That endpoint (`POST /api/admin/users`) requires a valid admin JWT, so the rule
+is "an admin may appoint an admin" — never "a request may claim to be one".
+Public sign-up still refuses the role outright, and every appointment is
+written to the audit log under `admin.created`.
+
+You can also create tenants and landlords this way. A landlord created by an
+admin is not charged the listing fee, on the basis that the platform is
+onboarding them deliberately.
+
 ---
 
 ## Seeding demo data

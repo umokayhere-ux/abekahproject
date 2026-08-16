@@ -1,10 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { BadgeCheck, Ban, Search, ShieldOff, Trash2, Undo2 } from "lucide-react";
+import {
+  BadgeCheck,
+  Ban,
+  Plus,
+  Search,
+  ShieldOff,
+  Trash2,
+  Undo2,
+} from "lucide-react";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { Button } from "@/components/ui/Button";
-import { ConfirmationModal } from "@/components/ui/Modal";
+import { ConfirmationModal, Modal } from "@/components/ui/Modal";
 import { BareSelect } from "@/components/ui/Field";
 import { Badge, RoleBadge, VerifiedBadge } from "@/components/ui/Badge";
 import { UserAvatar } from "@/components/ui/UserAvatar";
@@ -14,6 +22,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/hooks/useAuth";
 import { ApiError, apiFetch } from "@/lib/client";
 import { useApiResource } from "@/hooks/useApiResource";
+import { CreateUserForm } from "./CreateUserForm";
 import type { Paginated, SafeUser } from "@/types";
 
 const ROLE_OPTIONS = [
@@ -35,6 +44,7 @@ export function AdminUsers({ onChanged }: { onChanged: () => void }) {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SafeUser | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const {
     data,
@@ -215,7 +225,13 @@ export function AdminUsers({ onChanged }: { onChanged: () => void }) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-bold text-ink-900">Users</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-bold text-ink-900">Users</h2>
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="size-4" aria-hidden="true" />
+            Add user
+          </Button>
+        </div>
         <div className="flex w-full flex-wrap gap-3 sm:w-auto">
           <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
             <Search
@@ -269,6 +285,22 @@ export function AdminUsers({ onChanged }: { onChanged: () => void }) {
           )}
         </>
       )}
+
+      <Modal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="Add an account"
+        description="Create a tenant, landlord, or another administrator."
+      >
+        <CreateUserForm
+          onCreated={() => {
+            setCreateOpen(false);
+            load();
+            onChanged();
+          }}
+          onCancel={() => setCreateOpen(false)}
+        />
+      </Modal>
 
       <ConfirmationModal
         open={deleteTarget !== null}
