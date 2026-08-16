@@ -9,6 +9,7 @@ import { Conversation } from "@/models/Conversation";
 import { Message } from "@/models/Message";
 import { Review } from "@/models/Review";
 import { Activity } from "@/models/Activity";
+import { PendingRegistration } from "@/models/PendingRegistration";
 import type {
   ApiResponse,
   PropertyStatus,
@@ -28,6 +29,7 @@ export async function resetDatabase(): Promise<void> {
     Message.deleteMany({}),
     Review.deleteMany({}),
     Activity.deleteMany({}),
+    PendingRegistration.deleteMany({}),
   ]);
 }
 
@@ -40,6 +42,7 @@ export async function syncIndexes(): Promise<void> {
     Booking.syncIndexes(),
     Payment.syncIndexes(),
     Review.syncIndexes(),
+    PendingRegistration.syncIndexes(),
   ]);
 }
 

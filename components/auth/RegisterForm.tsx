@@ -8,7 +8,9 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Field";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth, dashboardPathFor } from "@/hooks/useAuth";
-import { ApiError } from "@/lib/client";
+import { ApiError, apiFetch } from "@/lib/client";
+import { openPaystackCheckout } from "@/lib/paystack-popup";
+import { formatGHS } from "@/lib/money";
 import { cn } from "@/lib/cn";
 
 type PublicRole = "tenant" | "landlord";
@@ -51,10 +53,22 @@ export function RegisterForm() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Read from the server so the stated amount cannot drift from what is charged.
+  const [fee, setFee] = useState<number | null>(null);
 
   useEffect(() => {
     if (!loading && user) router.replace(dashboardPathFor(user.role));
   }, [user, loading, router]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      apiFetch<{ landlordRegistrationFee: number }>("/api/config")
+        .then((config) => setFee(config.landlordRegistrationFee))
+        // The exact figure is a nicety; Paystack shows the real amount.
+        .catch(() => undefined);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -63,15 +77,42 @@ export function RegisterForm() {
     setFieldErrors({});
 
     try {
-      const created = await register({
+      const result = await register({
         name,
         email,
         password,
         phone: phone || undefined,
         role,
       });
-      toast.success(`Welcome to RentFinder, ${created.name}`);
-      router.replace(dashboardPathFor(created.role));
+
+      // A landlord has no account until the listing fee is paid, so the only
+      // thing to do here is open checkout.
+      if (result.requiresPayment) {
+        const handled = await openPaystackCheckout({
+          accessCode: result.accessCode,
+          authorizationUrl: result.authorizationUrl,
+          onSuccess: () => {
+            // The account is created by the server once the charge settles;
+            // this page just waits for it.
+            router.replace(
+              `/auth/registration-complete?reference=${result.reference}`,
+            );
+          },
+          onCancel: () => {
+            setSubmitting(false);
+            setFormError(
+              "Payment was cancelled, so your account was not created. You can try again.",
+            );
+          },
+        });
+
+        // A redirect leaves the page; keep the button busy until it does.
+        if (handled === "popup") return;
+        return;
+      }
+
+      toast.success(`Welcome to RentFinder, ${result.user.name}`);
+      router.replace(dashboardPathFor(result.user.role));
     } catch (error) {
       if (error instanceof ApiError) {
         setFormError(error.message);
@@ -188,8 +229,20 @@ export function RegisterForm() {
           onChange={(event) => setPassword(event.target.value)}
         />
 
+        {role === "landlord" && (
+          <div className="rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm">
+            <p className="font-semibold text-brand-900">
+              One-off listing fee{fee !== null ? `: ${formatGHS(fee)}` : ""}
+            </p>
+            <p className="mt-1 text-brand-800">
+              Paystack opens when you continue. Your account is created once the
+              payment goes through — nothing is charged if you cancel.
+            </p>
+          </div>
+        )}
+
         <Button type="submit" fullWidth size="lg" loading={submitting}>
-          Create account
+          {role === "landlord" ? "Continue to payment" : "Create account"}
         </Button>
       </form>
 

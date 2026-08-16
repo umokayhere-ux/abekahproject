@@ -11,6 +11,7 @@ import { Conversation } from "@/models/Conversation";
 import { Message } from "@/models/Message";
 import { Review } from "@/models/Review";
 import { Activity } from "@/models/Activity";
+import { PendingRegistration } from "@/models/PendingRegistration";
 import { RESET_SCOPES, type ResetScope } from "@/types";
 
 /** The literal string an administrator must type to arm a reset. */
@@ -23,6 +24,9 @@ type Counts = Record<string, number>;
  * referenced those listings.
  */
 async function resetLandlords(): Promise<Counts> {
+  // Landlord sign-ups awaiting payment are landlord data.
+  await PendingRegistration.deleteMany({});
+
   const landlords = await User.find({ role: "landlord" }).select("_id");
   const landlordIds = landlords.map((user) => user._id);
 
@@ -181,6 +185,8 @@ export const DELETE = withErrorHandling(async (request: Request) => {
           Conversation.deleteMany({}),
         ]);
       const users = await User.deleteMany({ role: { $ne: "admin" } });
+      // Sign-ups that were never completed are platform data too.
+      await PendingRegistration.deleteMany({});
       // Admins keep their accounts, but their stale favourites must go.
       await User.updateMany({}, { $set: { favorites: [] } });
 

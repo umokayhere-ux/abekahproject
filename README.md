@@ -398,16 +398,30 @@ There are two kinds of payment.
 
 ### 1. Landlord registration fee — GHS 50, one-off
 
-A landlord must pay this before they can publish a listing. It settles wholly
-to the platform account, so **no subaccount or split is involved** and it can
-be paid before payout details are set up.
+Landlords pay **before an account exists**. Paystack opens on the sign-up form;
+the account is created only once the charge settles.
 
-The account is created at sign-up and the landlord can sign in immediately;
-only *publishing* is gated. Taking the payment mid-signup would leave an
-orphaned half-account whenever a card was declined.
+```
+Fills in sign-up form  →  clicks Continue to payment
+        ↓  details held in a short-lived pending record (password hashed,
+           email reserved) — no user row is created
+Paystack popup, or hosted checkout if the popup cannot open
+        ↓
+Webhook settles the charge  →  the landlord account is created
+        ↓
+/auth/registration-complete polls until it exists, then offers sign-in
+```
 
-The flag is set **only** by the payment webhook — never by a client request —
-so listing cannot be unlocked without money actually arriving.
+A declined, abandoned, or underpaid attempt leaves **no account behind**: the
+pending record expires after an hour and releases the email, and a failed
+charge deletes it immediately.
+
+The fee settles wholly to the platform account, so **no subaccount or split is
+involved** — it is charged before the landlord has any payout details.
+
+Listing also remains gated on `registrationFeePaid` as defence in depth, which
+covers legacy accounts created before this flow. That flag is set **only** by
+the settlement path, never by a client request.
 
 ### 2. Rent — 5% platform commission
 

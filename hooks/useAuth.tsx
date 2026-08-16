@@ -26,7 +26,7 @@ interface AuthState {
   /** True until the stored session has been reconciled with the server. */
   loading: boolean;
   login: (email: string, password: string) => Promise<SafeUser>;
-  register: (input: RegisterInput) => Promise<SafeUser>;
+  register: (input: RegisterInput) => Promise<RegisterResult>;
   logout: () => Promise<void>;
   /** Replaces the cached user, e.g. after a profile update. */
   setUser: (user: SafeUser) => void;
@@ -41,6 +41,21 @@ export interface RegisterInput {
   phone?: string;
   role: Extract<Role, "tenant" | "landlord">;
 }
+
+/**
+ * Sign-up either creates the account outright (tenants) or hands back a
+ * Paystack checkout to complete first (landlords, who pay a listing fee before
+ * any account exists).
+ */
+export type RegisterResult =
+  | { requiresPayment: false; user: SafeUser }
+  | {
+      requiresPayment: true;
+      authorizationUrl: string;
+      accessCode: string;
+      reference: string;
+      amount: number;
+    };
 
 const AuthContext = createContext<AuthState | null>(null);
 
@@ -100,13 +115,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(async (input: RegisterInput) => {
-    const data = await apiFetch<{ user: SafeUser; token: string }>(
-      "/api/auth/register",
-      { method: "POST", body: input },
-    );
-    storeSession(data.token, data.user);
-    setUserState(data.user);
-    return data.user;
+    const data = await apiFetch<{
+      requiresPayment: boolean;
+      user?: SafeUser;
+      token?: string;
+      authorizationUrl?: string;
+      accessCode?: string;
+      reference?: string;
+      amount?: number;
+    }>("/api/auth/register", { method: "POST", body: input });
+
+    // A landlord has no account yet — only a payment to complete.
+    if (data.requiresPayment) {
+      return {
+        requiresPayment: true as const,
+        authorizationUrl: data.authorizationUrl!,
+        accessCode: data.accessCode!,
+        reference: data.reference!,
+        amount: data.amount!,
+      };
+    }
+
+    storeSession(data.token!, data.user!);
+    setUserState(data.user!);
+    return { requiresPayment: false as const, user: data.user! };
   }, []);
 
   const logout = useCallback(async () => {
