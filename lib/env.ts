@@ -116,11 +116,11 @@ export const env = {
  */
 export function registrationFeeGhs(): number {
   const raw = optional("LANDLORD_REGISTRATION_FEE_GHS");
-  if (raw === undefined) return 50;
+  if (raw === undefined) return 1;
 
   const value = Number(raw);
   // A zero or negative fee would create an uncollectable charge, so fall back.
-  if (!Number.isFinite(value) || value <= 0) return 50;
+  if (!Number.isFinite(value) || value <= 0) return 1;
   return value;
 }
 
