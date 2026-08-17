@@ -68,6 +68,9 @@ async function completeLandlordSignup(
     // Paid for at sign-up, which is the whole point of this path.
     registrationFeePaid: true,
     registrationFeePaidAt: new Date(),
+    // Paying is not the last gate: an administrator still has to approve the
+    // account before it can sign in.
+    approvalStatus: "pending",
   });
 
   // Now that a user exists, record the payment against it.
@@ -101,7 +104,8 @@ async function completeLandlordSignup(
     actor: user,
     targetType: "User",
     targetId: user._id.toString(),
-    message: "landlord account created after paying the registration fee",
+    message:
+      "landlord account created after paying the registration fee, awaiting admin approval",
     metadata: { reference: claimed.reference, amount: claimed.amount },
   });
 

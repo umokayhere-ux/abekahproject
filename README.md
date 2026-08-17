@@ -407,9 +407,13 @@ Fills in sign-up form  →  clicks Continue to payment
            email reserved) — no user row is created
 Paystack popup, or hosted checkout if the popup cannot open
         ↓
-Webhook settles the charge  →  the landlord account is created
+Webhook settles the charge  →  the landlord account is created,
+                               with approvalStatus: "pending"
         ↓
-/auth/registration-complete polls until it exists, then offers sign-in
+/auth/registration-complete polls until it exists, then tells the
+landlord their account is awaiting approval
+        ↓
+An admin approves it in Dashboard → Verifications  →  sign-in works
 ```
 
 A declined, abandoned, or underpaid attempt leaves **no account behind**: the
@@ -422,6 +426,33 @@ involved** — it is charged before the landlord has any payout details.
 Listing also remains gated on `registrationFeePaid` as defence in depth, which
 covers legacy accounts created before this flow. That flag is set **only** by
 the settlement path, never by a client request.
+
+#### Admin approval
+
+Paying is not admission. A paid landlord is created with
+`approvalStatus: "pending"` and **cannot sign in** until an administrator
+approves them from **Dashboard → Verifications**.
+
+| Status | Sign-in | Set by |
+| --- | --- | --- |
+| `pending` | blocked, "awaiting approval" | the settlement path, for paid landlord sign-ups |
+| `approved` | allowed | an admin pressing Approve (also marks them verified) |
+| `rejected` | blocked, "was not approved" | an admin pressing Reject |
+
+Two deliberate choices:
+
+- The field **defaults to `approved`**, so tenants, admins, and every account
+  that existed before this gate keep working. Only the paid sign-up path writes
+  `pending`.
+- The gate is re-checked in `authenticate()` on **every request**, not only at
+  sign-in, so revoking an approval ends a session already in flight.
+
+The block is applied *after* the password check, so the state of an account is
+never disclosed to someone who does not hold its credentials.
+
+> **Not built:** rejecting a landlord who has already paid the GHS 50 fee does
+> not refund them. Refunds are currently a manual step in the Paystack
+> dashboard.
 
 ### 2. Rent — 5% platform commission
 

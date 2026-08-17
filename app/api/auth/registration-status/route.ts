@@ -36,8 +36,14 @@ export const GET = withErrorHandling(async (request: Request) => {
   }).select("landlord");
 
   if (settled) {
-    const user = await User.findById(settled.landlord).select("email");
-    return ok({ status: "complete", email: user?.email });
+    const user = await User.findById(settled.landlord).select(
+      "email approvalStatus",
+    );
+    return ok({
+      status: "complete",
+      email: user?.email,
+      approvalStatus: user?.approvalStatus,
+    });
   }
 
   const pending = await PendingRegistration.findOne({ reference }).select(
@@ -54,7 +60,12 @@ export const GET = withErrorHandling(async (request: Request) => {
   if (transaction.status === "success") {
     const result = await settleSuccessfulPayment(transaction);
     if (result.applied || result.reason === "already-settled") {
-      return ok({ status: "complete", email: pending.email });
+      // A freshly created landlord always starts out awaiting approval.
+      return ok({
+        status: "complete",
+        email: pending.email,
+        approvalStatus: "pending",
+      });
     }
     return ok({ status: "failed", email: pending.email });
   }

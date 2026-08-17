@@ -1,5 +1,12 @@
 import mongoose, { Schema, type Model, type Types } from "mongoose";
-import { PAYOUT_CHANNELS, ROLES, type PayoutChannel, type Role } from "@/types";
+import {
+  APPROVAL_STATUSES,
+  PAYOUT_CHANNELS,
+  ROLES,
+  type ApprovalStatus,
+  type PayoutChannel,
+  type Role,
+} from "@/types";
 
 export interface UserDoc {
   _id: Types.ObjectId;
@@ -20,6 +27,11 @@ export interface UserDoc {
   /** Landlords only: the one-off listing fee has been paid and settled. */
   registrationFeePaid: boolean;
   registrationFeePaidAt?: Date;
+  /** Gates sign-in. Landlords start `pending`; everyone else is `approved`. */
+  approvalStatus: ApprovalStatus;
+  approvedAt?: Date;
+  approvedBy?: Types.ObjectId;
+  rejectionReason?: string;
   bankName?: string;
   bankCode?: string;
   bankAccountNumber?: string;
@@ -81,6 +93,21 @@ const userSchema = new Schema<UserDoc>(
     // client, so the gate cannot be lifted without money actually arriving.
     registrationFeePaid: { type: Boolean, default: false, index: true },
     registrationFeePaidAt: { type: Date },
+
+    /*
+     * Defaults to "approved" deliberately. Only the paid landlord sign-up sets
+     * "pending" explicitly, so tenants, admins, and every account that existed
+     * before this gate remain able to sign in.
+     */
+    approvalStatus: {
+      type: String,
+      enum: APPROVAL_STATUSES as unknown as string[],
+      default: "approved",
+      index: true,
+    },
+    approvedAt: { type: Date },
+    approvedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    rejectionReason: { type: String, maxlength: 500 },
     bankName: { type: String, default: "" },
     bankCode: { type: String, select: false },
     bankAccountNumber: { type: String, select: false },

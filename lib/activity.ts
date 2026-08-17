@@ -16,6 +16,8 @@ export const ACTIONS = {
   USER_VERIFIED: "user.verified",
   USER_UNVERIFIED: "user.unverified",
   USER_DELETED: "user.deleted",
+  USER_APPROVED: "user.approved",
+  USER_REJECTED: "user.rejected",
   USER_CREATED_BY_ADMIN: "user.created_by_admin",
   ADMIN_CREATED: "admin.created",
   PROPERTY_CREATED: "property.created",

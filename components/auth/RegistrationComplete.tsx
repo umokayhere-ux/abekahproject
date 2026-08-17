@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Loader2 } from "lucide-react";
 import { ButtonLink } from "@/components/ui/Button";
 import { Button } from "@/components/ui/Button";
 import { apiFetch } from "@/lib/client";
@@ -29,14 +29,20 @@ export function RegistrationComplete() {
   const [status, setStatus] = useState<Status>("checking");
   const [email, setEmail] = useState<string | undefined>();
   const [attempts, setAttempts] = useState(0);
+  const [awaitingApproval, setAwaitingApproval] = useState(false);
 
   const check = useCallback(async () => {
     if (!reference) return;
     try {
-      const result = await apiFetch<{ status: Status; email?: string }>(
+      const result = await apiFetch<{
+        status: Status;
+        email?: string;
+        approvalStatus?: string;
+      }>(
         `/api/auth/registration-status?reference=${encodeURIComponent(reference)}`,
       );
       setEmail(result.email);
+      setAwaitingApproval(result.approvalStatus === "pending");
       setStatus(result.status);
     } catch {
       setStatus("pending");
@@ -65,16 +71,43 @@ export function RegistrationComplete() {
   }, [attempts, check, reference, status]);
 
   if (status === "complete") {
+    // Paying creates the account but does not open it: an administrator has to
+    // approve a landlord before they can sign in.
     return (
       <div className="text-center">
-        <span className="mx-auto mb-4 flex size-12 items-center justify-center rounded-full bg-brand-50 text-brand-600">
-          <CheckCircle2 className="size-6" aria-hidden="true" />
+        <span
+          className={`mx-auto mb-4 flex size-12 items-center justify-center rounded-full ${
+            awaitingApproval
+              ? "bg-amber-50 text-amber-600"
+              : "bg-brand-50 text-brand-600"
+          }`}
+        >
+          {awaitingApproval ? (
+            <Clock className="size-6" aria-hidden="true" />
+          ) : (
+            <CheckCircle2 className="size-6" aria-hidden="true" />
+          )}
         </span>
         <h1 className="text-2xl font-bold text-ink-900">
-          Payment received — your account is ready
+          {awaitingApproval
+            ? "Payment received — awaiting approval"
+            : "Payment received — your account is ready"}
         </h1>
         <p className="mt-2 text-sm text-ink-500">
-          {email ? (
+          {awaitingApproval ? (
+            <>
+              Your landlord account
+              {email ? (
+                <>
+                  {" "}
+                  for <strong>{email}</strong>
+                </>
+              ) : null}{" "}
+              has been created and your payment confirmed. Our team reviews new
+              landlords before granting access — you will be able to sign in as
+              soon as it is approved.
+            </>
+          ) : email ? (
             <>
               Sign in as <strong>{email}</strong> to add your first property.
             </>
@@ -83,8 +116,12 @@ export function RegistrationComplete() {
           )}
         </p>
         <div className="mt-6">
-          <ButtonLink href="/auth/login" size="lg" fullWidth>
-            Sign in
+          <ButtonLink
+            href={awaitingApproval ? "/" : "/auth/login"}
+            size="lg"
+            fullWidth
+          >
+            {awaitingApproval ? "Back to home" : "Sign in"}
           </ButtonLink>
         </div>
       </div>

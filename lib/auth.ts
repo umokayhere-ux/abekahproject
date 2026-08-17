@@ -118,11 +118,34 @@ export function toSafeUser(user: UserDoc): SafeUser {
     hasPayoutAccount: Boolean(user.paystackSubaccount),
     payoutChannel: user.payoutChannel,
     registrationFeePaid: Boolean(user.registrationFeePaid),
+    approvalStatus: user.approvalStatus,
     bankName: user.bankName ?? "",
     bankAccountLast4: accountNumber ? accountNumber.slice(-4) : undefined,
     createdAt: user.createdAt?.toISOString(),
     updatedAt: user.updatedAt?.toISOString(),
   };
+}
+
+
+/**
+ * The message shown when an account is not cleared to sign in, or `null` when
+ * it is.
+ *
+ * Only landlords are gated: they pay a fee, then wait for an administrator to
+ * approve them. Everyone else defaults to `approved`, so this returns null.
+ */
+export function approvalBlockReason(user: {
+  role: Role;
+  approvalStatus?: string;
+}): string | null {
+  if (user.role !== "landlord") return null;
+  // Absent means an account created before this gate existed — allow it.
+  if (!user.approvalStatus || user.approvalStatus === "approved") return null;
+
+  if (user.approvalStatus === "rejected") {
+    return "Your landlord application was not approved. Please contact RentFinder support.";
+  }
+  return "Your account is awaiting approval by our team. We will email you as soon as it is reviewed.";
 }
 
 export interface AuthContext {
@@ -153,6 +176,12 @@ export async function authenticate(request: Request): Promise<AuthContext> {
   // The DB is authoritative: a stale token cannot claim an elevated role.
   if (user.role !== payload.role) {
     throw new HttpError(401, "Your session is out of date. Please sign in again.");
+  }
+  // Re-checked on every request, not just at sign-in, so revoking approval
+  // ends any session already in flight.
+  const blocked = approvalBlockReason(user);
+  if (blocked) {
+    throw new HttpError(403, blocked);
   }
 
   return {

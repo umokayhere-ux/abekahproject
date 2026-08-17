@@ -2,6 +2,7 @@ import { connectDB } from "@/lib/db";
 import { clientIp, fail, ok, withErrorHandling } from "@/lib/api";
 import { Validator, readJson } from "@/lib/validate";
 import {
+  approvalBlockReason,
   assertAuthConfigured,
   signToken,
   toSafeUser,
@@ -49,6 +50,14 @@ export const POST = withErrorHandling(async (request: Request) => {
       "Your account has been suspended. Please contact RentFinder support.",
       403,
     );
+  }
+
+  // Landlords must be approved by an administrator before they can sign in.
+  // Also after the password check, so the state of an account is not
+  // disclosed to someone who does not hold its credentials.
+  const blocked = approvalBlockReason(user);
+  if (blocked) {
+    return fail(blocked, 403);
   }
 
   const token = await signToken({

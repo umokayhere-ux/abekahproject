@@ -30,6 +30,16 @@ export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 export const PAYMENT_PURPOSES = ["rent", "registration_fee"] as const;
 export type PaymentPurpose = (typeof PAYMENT_PURPOSES)[number];
 
+/**
+ * Whether an account may sign in.
+ *
+ * Landlords are created `pending` after paying and must be approved by an
+ * administrator. Everyone else defaults to `approved`, so the gate applies
+ * only where it is meant to — and existing accounts are never locked out.
+ */
+export const APPROVAL_STATUSES = ["pending", "approved", "rejected"] as const;
+export type ApprovalStatus = (typeof APPROVAL_STATUSES)[number];
+
 /** How a landlord receives their money. */
 export const PAYOUT_CHANNELS = ["bank", "mobile_money"] as const;
 export type PayoutChannel = (typeof PAYOUT_CHANNELS)[number];
@@ -61,6 +71,8 @@ export interface SafeUser {
   payoutChannel?: PayoutChannel;
   /** Landlords only: whether the one-off listing fee has been paid. */
   registrationFeePaid?: boolean;
+  /** Whether an administrator has approved this account to sign in. */
+  approvalStatus?: ApprovalStatus;
   /** Provider name: a bank, or a wallet such as "MTN Mobile Money". */
   bankName?: string;
   /** Masked to the last 4 digits. */

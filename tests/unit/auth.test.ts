@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SignJWT } from "jose";
 import {
+  approvalBlockReason,
   BCRYPT_ROUNDS,
   TOKEN_TTL_SECONDS,
   extractToken,
@@ -217,5 +218,41 @@ describe("toSafeUser", () => {
     expect(safe.role).toBe("landlord");
     expect(safe.verified).toBe(true);
     expect(safe.suspended).toBe(false);
+  });
+});
+
+describe("approvalBlockReason", () => {
+  it("lets an approved landlord through", () => {
+    expect(
+      approvalBlockReason({ role: "landlord", approvalStatus: "approved" }),
+    ).toBeNull();
+  });
+
+  it("blocks a landlord awaiting a decision", () => {
+    const reason = approvalBlockReason({
+      role: "landlord",
+      approvalStatus: "pending",
+    });
+    expect(reason).toMatch(/awaiting approval/i);
+  });
+
+  it("blocks a rejected landlord with a different message", () => {
+    const reason = approvalBlockReason({
+      role: "landlord",
+      approvalStatus: "rejected",
+    });
+    expect(reason).toMatch(/not approved/i);
+    expect(reason).not.toMatch(/awaiting/i);
+  });
+
+  it("never gates tenants or admins", () => {
+    for (const role of ["tenant", "admin"] as const) {
+      expect(approvalBlockReason({ role, approvalStatus: "pending" })).toBeNull();
+    }
+  });
+
+  it("lets accounts predating the gate sign in", () => {
+    // No approvalStatus at all — an existing landlord must not be locked out.
+    expect(approvalBlockReason({ role: "landlord" })).toBeNull();
   });
 });

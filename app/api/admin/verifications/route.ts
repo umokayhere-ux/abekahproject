@@ -1,10 +1,23 @@
+import type { QueryFilter } from "mongoose";
 import { connectDB } from "@/lib/db";
 import { ok, withErrorHandling } from "@/lib/api";
 import { parsePagination } from "@/lib/validate";
 import { requireAdmin, toSafeUser } from "@/lib/auth";
 import { LANDLORD_PUBLIC_FIELDS, serializeProperty } from "@/lib/serialize";
-import { User } from "@/models/User";
+import { User, type UserDoc } from "@/models/User";
 import { Property } from "@/models/Property";
+
+/**
+ * Landlords needing a decision: either they have paid and are waiting to be
+ * let in (`approvalStatus: "pending"`), or they are in but not yet verified.
+ * Rejected and suspended accounts are already decided, so they drop out.
+ */
+const LANDLORD_QUEUE: QueryFilter<UserDoc> = {
+  role: "landlord",
+  suspended: false,
+  approvalStatus: { $ne: "rejected" },
+  $or: [{ approvalStatus: "pending" }, { verified: false }],
+};
 
 /**
  * GET /api/admin/verifications
@@ -21,11 +34,11 @@ export const GET = withErrorHandling(async (request: Request) => {
   const { page, limit, skip } = parsePagination(params, { defaultLimit: 20 });
 
   const [landlords, landlordTotal, properties, propertyTotal] = await Promise.all([
-    User.find({ role: "landlord", verified: false, suspended: false })
+    User.find(LANDLORD_QUEUE)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
-    User.countDocuments({ role: "landlord", verified: false, suspended: false }),
+    User.countDocuments(LANDLORD_QUEUE),
     Property.find({ verified: false })
       .populate("landlord", LANDLORD_PUBLIC_FIELDS)
       .sort({ createdAt: -1 })

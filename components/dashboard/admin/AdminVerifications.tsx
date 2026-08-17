@@ -46,13 +46,16 @@ export function AdminVerifications({ onChanged }: { onChanged: () => void }) {
         method: "PATCH",
         body: {
           userId: landlord._id,
-          // Rejecting suspends the account rather than deleting it, so the
-          // decision is reversible.
-          action: approve ? "verify" : "suspend",
+          // Approving lets them sign in and verifies them in one step;
+          // rejecting blocks sign-in without deleting anything, so either
+          // decision can be reversed later.
+          action: approve ? "approve" : "reject",
         },
       });
       toast.success(
-        approve ? `${landlord.name} verified` : `${landlord.name} rejected`,
+        approve
+          ? `${landlord.name} approved and can now sign in`
+          : `${landlord.name} rejected`,
       );
       load();
       onChanged();
@@ -108,12 +111,12 @@ export function AdminVerifications({ onChanged }: { onChanged: () => void }) {
           id="landlord-queue-heading"
           className="mb-4 text-lg font-bold text-ink-900"
         >
-          Landlords awaiting verification ({queue.landlordTotal})
+          Landlords awaiting approval ({queue.landlordTotal})
         </h2>
 
         {queue.landlords.length === 0 ? (
           <p className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-ink-500">
-            No landlords are waiting for verification.
+            No landlords are waiting for a decision.
           </p>
         ) : (
           <ul className="space-y-3">
@@ -141,6 +144,13 @@ export function AdminVerifications({ onChanged }: { onChanged: () => void }) {
                       {landlord.phone ? ` · ${landlord.phone}` : ""}
                       {landlord.hasPayoutAccount ? " · payout connected" : ""}
                     </p>
+                    {landlord.approvalStatus === "pending" ? (
+                      <p className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                        {landlord.registrationFeePaid
+                          ? "Fee paid · cannot sign in until approved"
+                          : "Cannot sign in until approved"}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 

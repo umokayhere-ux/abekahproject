@@ -29,6 +29,12 @@ const signup = {
   role: "landlord",
 };
 
+/** The message from a failure envelope. Fails loudly on a success response. */
+function messageOf(body: { success: boolean; message?: string }): string {
+  if (body.success) throw new Error("Expected a failure response");
+  return body.message ?? "";
+}
+
 /** Stubs Paystack's initialize endpoint. */
 function stubPaystackInitialize() {
   const calls: Record<string, unknown>[] = [];
@@ -165,6 +171,8 @@ describe("landlord signs up and pays", () => {
     expect(created!.role).toBe("landlord");
     // Paid for at sign-up, so listing is unlocked immediately.
     expect(created!.registrationFeePaid).toBe(true);
+    // But paying is not admission: an admin still has to approve.
+    expect(created!.approvalStatus).toBe("pending");
 
     // The pending record is consumed.
     expect(await PendingRegistration.countDocuments({})).toBe(0);
@@ -177,7 +185,7 @@ describe("landlord signs up and pays", () => {
     expect(payment!.splitBreakdown.landlord).toBe(0);
   });
 
-  it("lets the landlord sign in with the password they chose", async () => {
+  it("refuses sign-in until an administrator approves, then allows it", async () => {
     stubPaystackInitialize();
 
     const { body } = await readResponse<{ reference: string }>(
@@ -189,7 +197,48 @@ describe("landlord signs up and pays", () => {
 
     vi.unstubAllGlobals();
 
-    const { status } = await readResponse(
+    const attempt = async () =>
+      readResponse<{ message?: string }>(
+        await login(
+          makeRequest("/api/auth/login", {
+            method: "POST",
+            body: { email: signup.email, password: signup.password },
+          }),
+        ),
+      );
+
+    // Paid, correct password — still blocked, and told why.
+    const blocked = await attempt();
+    expect(blocked.status).toBe(403);
+    expect(messageOf(blocked.body)).toMatch(/awaiting approval/i);
+
+    await User.updateOne(
+      { email: signup.email },
+      { $set: { approvalStatus: "approved" } },
+    );
+
+    const allowed = await attempt();
+    expect(allowed.status).toBe(200);
+  });
+
+  it("keeps a rejected landlord out with a distinct message", async () => {
+    stubPaystackInitialize();
+
+    const { body } = await readResponse<{ reference: string }>(
+      await register(
+        makeRequest("/api/auth/register", { method: "POST", body: signup }),
+      ),
+    );
+    await settleSuccessfulPayment(successFor(expectData(body).reference, 50));
+
+    vi.unstubAllGlobals();
+
+    await User.updateOne(
+      { email: signup.email },
+      { $set: { approvalStatus: "rejected" } },
+    );
+
+    const { status, body: failure } = await readResponse<{ message?: string }>(
       await login(
         makeRequest("/api/auth/login", {
           method: "POST",
@@ -198,7 +247,34 @@ describe("landlord signs up and pays", () => {
       ),
     );
 
-    expect(status).toBe(200);
+    expect(status).toBe(403);
+    expect(messageOf(failure)).toMatch(/not approved/i);
+  });
+
+  it("does not reveal the approval state to someone without the password", async () => {
+    stubPaystackInitialize();
+
+    const { body } = await readResponse<{ reference: string }>(
+      await register(
+        makeRequest("/api/auth/register", { method: "POST", body: signup }),
+      ),
+    );
+    await settleSuccessfulPayment(successFor(expectData(body).reference, 50));
+
+    vi.unstubAllGlobals();
+
+    const { status, body: failure } = await readResponse<{ message?: string }>(
+      await login(
+        makeRequest("/api/auth/login", {
+          method: "POST",
+          body: { email: signup.email, password: "WrongPassword123" },
+        }),
+      ),
+    );
+
+    // The generic credential error, not the approval notice.
+    expect(status).toBe(401);
+    expect(messageOf(failure)).not.toMatch(/approv/i);
   });
 
   it("is idempotent across duplicate settlements", async () => {

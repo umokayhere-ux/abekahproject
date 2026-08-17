@@ -45,6 +45,8 @@ export const GET = withErrorHandling(async (request: Request) => {
   const status = params.get("status");
   if (status === "suspended") filter.suspended = true;
   if (status === "unverified") filter.verified = false;
+  // Landlords who have paid and are waiting on an approval decision.
+  if (status === "pending") filter.approvalStatus = "pending";
 
   const [docs, total] = await Promise.all([
     User.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
@@ -112,6 +114,10 @@ export const POST = withErrorHandling(async (request: Request) => {
     // is onboarding them deliberately rather than taking their money.
     registrationFeePaid: role === "landlord",
     registrationFeePaidAt: role === "landlord" ? new Date() : undefined,
+    // An admin creating the account *is* the approval, so it can sign in at once.
+    approvalStatus: "approved",
+    approvedAt: new Date(),
+    approvedBy: auth.user._id,
   });
 
   await logActivity({
@@ -131,10 +137,12 @@ export const POST = withErrorHandling(async (request: Request) => {
 /**
  * PATCH /api/admin/users
  *
- * Verify, unverify, suspend, or unsuspend an account.
+ * Verify, unverify, suspend, unsuspend, approve, or reject an account.
  *
- * An admin cannot suspend themselves, and no action here can grant the admin
- * role — role changes are deliberately not part of this endpoint.
+ * `approve` and `reject` drive the sign-in gate landlords sit behind after
+ * paying their registration fee. An admin cannot suspend themselves, and no
+ * action here can grant the admin role — role changes are deliberately not
+ * part of this endpoint.
  */
 export const PATCH = withErrorHandling(async (request: Request) => {
   const auth = await requireAdmin(request);
@@ -144,9 +152,15 @@ export const PATCH = withErrorHandling(async (request: Request) => {
   const userId = v.objectId("userId", { label: "User" });
   const action = v.enum(
     "action",
-    ["verify", "unverify", "suspend", "unsuspend"] as const,
+    ["verify", "unverify", "suspend", "unsuspend", "approve", "reject"] as const,
     { label: "Action" },
   );
+  // Shown to the applicant, so it is optional but bounded.
+  const reason = v.string("reason", {
+    required: false,
+    max: 500,
+    label: "Reason",
+  });
   v.assert();
 
   await connectDB();
@@ -157,11 +171,14 @@ export const PATCH = withErrorHandling(async (request: Request) => {
   if (userId === auth.userId && (action === "suspend" || action === "unverify")) {
     return fail("You cannot apply that action to your own account", 400);
   }
-  if (target.role === "admin" && action === "suspend") {
+  if (target.role === "admin" && (action === "suspend" || action === "reject")) {
     return fail("Administrator accounts cannot be suspended", 400);
   }
+  if (userId === auth.userId && action === "reject") {
+    return fail("You cannot apply that action to your own account", 400);
+  }
 
-  const changes: Record<string, boolean> = {};
+  const changes: Record<string, unknown> = {};
   switch (action) {
     case "verify":
       changes.verified = true;
@@ -174,6 +191,20 @@ export const PATCH = withErrorHandling(async (request: Request) => {
       break;
     case "unsuspend":
       changes.suspended = false;
+      break;
+    case "approve":
+      // One press admits the landlord outright: they can sign in *and* they
+      // carry the verified badge. Clears any earlier rejection, so the
+      // decision is reversible.
+      changes.verified = true;
+      changes.approvalStatus = "approved";
+      changes.approvedAt = new Date();
+      changes.approvedBy = auth.user._id;
+      changes.rejectionReason = "";
+      break;
+    case "reject":
+      changes.approvalStatus = "rejected";
+      changes.rejectionReason = reason || "";
       break;
   }
 
@@ -188,6 +219,17 @@ export const PATCH = withErrorHandling(async (request: Request) => {
     unverify: ACTIONS.USER_UNVERIFIED,
     suspend: ACTIONS.USER_SUSPENDED,
     unsuspend: ACTIONS.USER_UNSUSPENDED,
+    approve: ACTIONS.USER_APPROVED,
+    reject: ACTIONS.USER_REJECTED,
+  }[action!];
+
+  const past = {
+    verify: "verified",
+    unverify: "unverified",
+    suspend: "suspended",
+    unsuspend: "unsuspended",
+    approve: "approved",
+    reject: "rejected",
   }[action!];
 
   await logActivity({
@@ -195,7 +237,7 @@ export const PATCH = withErrorHandling(async (request: Request) => {
     actor: auth.user,
     targetType: "User",
     targetId: userId,
-    message: `${target.email} was ${action}ed by an administrator`,
+    message: `${target.email} was ${past} by an administrator`,
     metadata: { targetRole: target.role },
     ip: clientIp(request),
   });

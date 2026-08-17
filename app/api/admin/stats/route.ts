@@ -42,7 +42,14 @@ export const GET = withErrorHandling(async (request: Request) => {
     User.countDocuments({ suspended: true }),
     Property.countDocuments({}),
     Property.countDocuments({ verified: true }),
-    User.countDocuments({ role: "landlord", verified: false, suspended: false }),
+    // Matches the verification queue: awaiting approval, or approved but not
+    // yet verified.
+    User.countDocuments({
+      role: "landlord",
+      suspended: false,
+      approvalStatus: { $ne: "rejected" },
+      $or: [{ approvalStatus: "pending" }, { verified: false }],
+    }),
     Booking.countDocuments({}),
     Booking.countDocuments({ status: "confirmed" }),
     Booking.countDocuments({ status: "pending" }),
