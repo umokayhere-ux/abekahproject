@@ -56,8 +56,8 @@ export default function PrivacyPage() {
 
       <p className="mt-10 text-sm text-ink-500">
         Questions about your data? Email{" "}
-        <a href="mailto:hello@rentfinder.gh" className="text-brand-700 hover:underline">
-          hello@rentfinder.gh
+        <a href="mailto:Nanaabekah90@gmail.com" className="text-brand-700 hover:underline">
+          Nanaabekah90@gmail.com
         </a>
         .
       </p>

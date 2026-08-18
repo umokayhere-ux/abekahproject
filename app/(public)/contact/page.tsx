@@ -11,14 +11,14 @@ const CHANNELS = [
   {
     icon: Mail,
     label: "Email",
-    value: "hello@rentfinder.gh",
-    href: "mailto:hello@rentfinder.gh",
+    value: "Nanaabekah90@gmail.com",
+    href: "mailto:Nanaabekah90@gmail.com",
   },
   {
     icon: Phone,
     label: "Phone",
-    value: "+233 30 200 0000",
-    href: "tel:+233302000000",
+    value: "054 333 0134",
+    href: "tel:+233543330134",
   },
   {
     icon: MapPin,

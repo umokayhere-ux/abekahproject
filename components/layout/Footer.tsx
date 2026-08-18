@@ -49,19 +49,19 @@ export function Footer() {
               <li className="flex items-center gap-2">
                 <Mail className="size-4 shrink-0" aria-hidden="true" />
                 <a
-                  href="mailto:hello@rentfinder.gh"
+                  href="mailto:Nanaabekah90@gmail.com"
                   className="hover:text-brand-700 hover:underline"
                 >
-                  hello@rentfinder.gh
+                  Nanaabekah90@gmail.com
                 </a>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="size-4 shrink-0" aria-hidden="true" />
                 <a
-                  href="tel:+233302000000"
+                  href="tel:+233543330134"
                   className="hover:text-brand-700 hover:underline"
                 >
-                  +233 30 200 0000
+                  054 333 0134
                 </a>
               </li>
             </ul>
