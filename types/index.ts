@@ -11,7 +11,13 @@ export type Role = (typeof ROLES)[number];
 export const PUBLIC_ROLES = ["tenant", "landlord"] as const;
 export type PublicRole = (typeof PUBLIC_ROLES)[number];
 
-export const PROPERTY_TYPES = ["apartment", "room", "house", "studio"] as const;
+export const PROPERTY_TYPES = [
+  "apartment",
+  "room",
+  "house",
+  "studio",
+  "hostel",
+] as const;
 export type PropertyType = (typeof PROPERTY_TYPES)[number];
 
 export const PROPERTY_STATUSES = ["available", "rented"] as const;

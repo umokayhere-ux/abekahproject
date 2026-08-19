@@ -60,6 +60,7 @@ export const PROPERTY_TYPE_OPTIONS = [
   { value: "room", label: "Single room" },
   { value: "house", label: "House" },
   { value: "studio", label: "Studio" },
+  { value: "hostel", label: "Hostel" },
 ];
 
 export const SORT_OPTIONS = [

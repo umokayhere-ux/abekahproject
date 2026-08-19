@@ -10,6 +10,7 @@ const SECTIONS = [
       { href: "/properties?type=house", label: "Houses" },
       { href: "/properties?type=studio", label: "Studios" },
       { href: "/properties?type=room", label: "Single rooms" },
+      { href: "/properties?type=hostel", label: "Hostels" },
     ],
   },
   {
