@@ -3,7 +3,7 @@ import { registrationFeeGhs, platformCommissionPercent } from "@/lib/env";
 import { computeSplit } from "@/lib/money";
 
 /**
- * The commercial terms: a one-off GHS 1 landlord fee, and a 5% platform
+ * The commercial terms: a one-off GHS 50 landlord fee, and a 5% platform
  * commission on rent with the remaining 95% going to the landlord.
  */
 describe("landlord registration fee", () => {
@@ -14,9 +14,9 @@ describe("landlord registration fee", () => {
     else process.env.LANDLORD_REGISTRATION_FEE_GHS = original;
   });
 
-  it("defaults to GHS 1", () => {
+  it("defaults to GHS 50", () => {
     delete process.env.LANDLORD_REGISTRATION_FEE_GHS;
-    expect(registrationFeeGhs()).toBe(1);
+    expect(registrationFeeGhs()).toBe(50);
   });
 
   it("honours a configured amount", () => {
@@ -28,7 +28,7 @@ describe("landlord registration fee", () => {
     // A zero or negative fee would create an uncollectable charge.
     for (const bad of ["0", "-10", "abc", ""]) {
       process.env.LANDLORD_REGISTRATION_FEE_GHS = bad;
-      expect(registrationFeeGhs(), bad).toBe(1);
+      expect(registrationFeeGhs(), bad).toBe(50);
     }
   });
 });

@@ -52,7 +52,7 @@ export default function AboutPage() {
       <section className="mt-12">
         <h2 className="text-2xl font-bold text-ink-900">How we make money</h2>
         <p className="mt-3 leading-relaxed text-ink-700">
-          Landlords pay a one-off GHS 1 registration fee to start listing, and
+          Landlords pay a one-off GHS 50 registration fee to start listing, and
           we take a 5% commission on rent collected through the platform. The
           tenant pays exactly the rent that is listed — the commission comes out
           of the landlord&apos;s side, so there are no surprise fees at checkout.

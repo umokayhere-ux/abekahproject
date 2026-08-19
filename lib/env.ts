@@ -116,11 +116,11 @@ export const env = {
  */
 export function registrationFeeGhs(): number {
   const raw = optional("LANDLORD_REGISTRATION_FEE_GHS");
-  if (raw === undefined) return 1;
+  if (raw === undefined) return 50;
 
   const value = Number(raw);
   // A zero or negative fee would create an uncollectable charge, so fall back.
-  if (!Number.isFinite(value) || value <= 0) return 1;
+  if (!Number.isFinite(value) || value <= 0) return 50;
   return value;
 }
 
@@ -156,7 +156,7 @@ export const PAYMENT_CONFIG = {
   get depositMonths() {
     // As above, an empty value must fall back rather than becoming 0.
     const raw = optional("PAYMENT_DEPOSIT_MONTHS");
-    if (raw === undefined) return 1;
+    if (raw === undefined) return 50;
 
     const months = Number(raw);
     return Number.isFinite(months) && months >= 0 && months <= 12 ? months : 1;
