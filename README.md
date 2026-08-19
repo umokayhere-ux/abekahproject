@@ -5,7 +5,7 @@ rooms, apartments, houses, and studios; landlords list properties and receive
 rent directly to their bank account; administrators oversee the whole platform.
 
 Prices are in Ghana cedis (GHS), payments run through Paystack — a one-off
-GHS 50 landlord registration fee plus a 5% commission on rent — and the app is
+GHS 1 landlord registration fee plus a 5% commission on rent — and the app is
 built to deploy to Vercel with MongoDB Atlas.
 
 ---
@@ -41,7 +41,7 @@ Paystack, message landlords, review a property after a confirmed stay, and
 manage their profile and payment history.
 
 ### Landlords
-Pay a one-off GHS 50 registration fee to unlock listing, then create and manage
+Pay a one-off GHS 1 registration fee to unlock listing, then create and manage
 listings with photo uploads, review and confirm booking requests, connect a
 mobile money wallet or bank account for payouts, message tenants, and track
 earnings, views, and bookings.
@@ -167,7 +167,7 @@ email is not sent.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `NEXT_PUBLIC_APP_URL` | inferred | Base URL for reset links and Paystack callbacks. Inferred automatically on Vercel; set it explicitly for a custom domain. |
-| `LANDLORD_REGISTRATION_FEE_GHS` | `50` | One-off fee a landlord pays before publishing. Goes wholly to the platform. |
+| `LANDLORD_REGISTRATION_FEE_GHS` | `1` | One-off fee a landlord pays before publishing. Goes wholly to the platform. |
 | `PLATFORM_COMMISSION_PERCENT` | `5` | Commission on rent, absorbed by the landlord. Values outside 0–100 fall back to 5. |
 | `PAYMENT_INCLUDE_DEPOSIT` | `true` | Whether the first payment bundles a deposit. |
 | `PAYMENT_DEPOSIT_MONTHS` | `1` | Deposit size, in months of rent. |
@@ -396,7 +396,7 @@ it works on Vercel's serverless runtime without adjustment.
 
 There are two kinds of payment.
 
-### 1. Landlord registration fee — GHS 50, one-off
+### 1. Landlord registration fee — GHS 1, one-off
 
 Landlords pay **before an account exists**. Paystack opens on the sign-up form;
 the account is created only once the charge settles.
